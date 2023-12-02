@@ -80,6 +80,7 @@ fn check_word_number(full_string: &String, char: &char, index: usize) -> Option<
     // Check if the char passed could be the first letter of a number in word form.
     // If it is, we need to check the next few characters to see if they match the rest of the
     // word.
+    // I genuinely dislike this function, but I can't think of a better way to do it.
 
     let mut result: Option<i32> = None;
     let check_slice = full_string.chars().skip(index);
