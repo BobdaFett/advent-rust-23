@@ -63,7 +63,7 @@ pub fn run() -> std::io::Result<()> {
     }
 
     // Print the total sum.
-    println!("The total sum of our calibration values is: {:?}", sum);
+    println!("Day One:\n The total sum of our calibration values is: {:?}", sum);
 
     Ok(())
 
@@ -85,6 +85,7 @@ fn check_word_number(full_string: &String, char: &char, index: usize) -> Option<
     let mut result: Option<i32> = None;
     let check_slice = full_string.chars().skip(index);
 
+    // Match the char to the first letter of a number in word form.
     match char {
         'o' => {
             if check_slice.clone().count() >= 3 {
