@@ -1,7 +1,7 @@
 // All credit for this solution goes to manhunto, who posted it on the Advent of Code subreddit.
 // It isn't a direct copy, check out the original here: https://github.com/manhunto/advent-of-code-rs/blob/master/src/solutions/day03.rs 
 // I've added comments (which they didn't have), changed their recognize_numbers() function to
-// parse_string(), and changed their part_one() and part_two() functions to run().
+// parse_string(), and changed their part_one() and part_two() functions to run() with a println!()
 
 
 use crate::util::read_input;
