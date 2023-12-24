@@ -1,89 +1,162 @@
-// This is a matrix counting problem. Our objective is to find all of the numbers in
-// the matrix that are adjacent to a symbol. A number is considered adjacent if it is
-// directly above, below, left, right, or diagonal to a symbol. We can solve this by
-// creating a 2d array of Option<(char, bool)> where the bool represents whether or
-// not that cell has been checked.
+// All credit for this solution goes to manhunto, who posted it on the Advent of Code subreddit.
+// It isn't a direct copy, check out the original here: https://github.com/manhunto/advent-of-code-rs/blob/master/src/solutions/day03.rs 
+// I've added comments (which they didn't have), changed their recognize_numbers() function to
+// parse_string(), and changed their part_one() and part_two() functions to run().
 
+
+use crate::util::read_input;
+
+// Stores the number and the coordinates of the cells that contain it.
+#[derive(Debug, PartialEq)]
+struct Number {
+    number: i32,
+    positions: Vec<(i32, i32)>  // Use i32 because Symbol uses it.
+}
+
+impl Number {
+    // Returns true if this number collides with the given symbol.
+    fn collides_with(&self, sym: &Symbol) -> bool {
+        for pos in sym.adj_coords {
+            if self.positions.contains(&pos) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    // Returns true if this number collides with any of the given symbols.
+    fn collide_with_any(&self, symbols: &Vec<Symbol>) -> bool {
+        for sym in symbols {
+            if self.collides_with(sym) {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+// Stores the coordinates of the cells that are adjacent to this symbol.
+struct Symbol {
+    symbol: char,
+    adj_coords: [(i32, i32); 8]  // We use i32 because it's ok to store negative values.
+}
+
+impl Symbol {
+    // Returns a new Symbol struct. Builds the adj_coords based on given coords.
+    fn new(x: i32, y: i32, symbol: char) -> Self {
+        Self {
+            symbol,
+            adj_coords: [
+                (x - 1, y - 1), (x, y - 1), (x + 1, y - 1),
+                (x - 1, y),                 (x + 1, y),
+                (x - 1, y + 1), (x, y + 1), (x + 1, y + 1)
+            ]
+        }
+    }
+}
+
+/// Parses the input string into a vector of Number and Symbol structs.
+fn parse_string(input: &String) -> (Vec<Number>, Vec<Symbol>) {
+    let mut tmp_numbers: Vec<char> = Vec::new();
+    let mut tmp_positions: Vec<(i32, i32)> = Vec::new();
+
+    let mut numbers: Vec<Number> = Vec::new();
+    let mut symbols: Vec<Symbol> = Vec::new();
+
+    // Iterate over the lines and parse them into numbers.
+    for (y, line) in input.lines().enumerate() {
+        // Check each character in the line.
+        // If it's a number, parse it into a Number struct.
+        let line = line.chars().collect::<Vec<char>>();
+
+        for (x, c) in line.iter().enumerate() {
+            if c.is_numeric() {
+                // Push the number and its coordinates into the temp vectors.
+                tmp_numbers.push(*c);
+                tmp_positions.push((x.try_into().unwrap(), y.try_into().unwrap()));
+            } else {
+                // If the number vector isn't empty, parse it into a Number struct.
+                if !tmp_numbers.is_empty() {
+                    let number = Number {
+                        number: String::from_iter(&tmp_numbers).parse::<i32>().unwrap(),
+                        positions: tmp_positions.clone()
+                    };
+
+                    // Clear the temp vectors, ready for the next number.
+                    tmp_numbers.clear();
+                    tmp_positions.clear();
+
+                    // Push the number into the numbers vector.
+                    numbers.push(number);
+                }
+                
+                // If the character is a symbol, parse it into a Symbol struct.
+                if c != &'.' {
+                    symbols.push(Symbol::new(x.try_into().unwrap(), y.try_into().unwrap(), *c));
+                }
+            }
+        }
+
+        // Check the number vector again, in case the line ended with a number.
+        if !tmp_numbers.is_empty() {
+            let number = Number {
+                number: String::from_iter(&tmp_numbers).parse::<i32>().unwrap(),
+                positions: tmp_positions.clone()
+            };
+
+            // Clear the temp vectors, ready for the next number.
+            tmp_numbers.clear();
+            tmp_positions.clear();
+
+            // Push the number into the numbers vector.
+            numbers.push(number);
+        }
+    }
+    
+    // Return the vector of numbers.
+    (numbers, symbols)
+}
 
 pub fn run() -> std::io::Result<()> {
-    // Read the file into a string.
-    let input = std::fs::read_to_string("C:\\Users\\lvas4\\Documents\\advent-rust-23\\day_three\\input.txt")?;
+    // Open the file.
+    let file_string = read_input("03")?;
 
-    // Create the matrix.
-    // let mut matrix: Vec<Vec<Option<(char, bool)>>> = vec![vec![None; 1]; 1];
-    let mut matrix: Vec<Vec<Option<(char, bool)>>> = Vec::new();
+    let numbers: Vec<Number>;
+    let symbols: Vec<Symbol>;
 
-    // Iterate through each line of the input.
-    for (row, line) in input.lines().enumerate() {
-        // Push a new row onto the matrix.
-        matrix.push(vec![None; line.len()]);
+    // Parse the input into the correct structs.
+    (numbers, symbols) = parse_string(&file_string);
 
-        // Split the line into a Vec of chars.
-        let chars = line.chars().collect::<Vec<char>>();
+    // Part one - find the sum of all numbers that collide with symbols.
+    let sum_one = numbers
+        .iter()
+        .filter(|n| n.collide_with_any(&symbols))
+        .fold(0, |acc, n| acc + n.number);
 
-        // Build the matrix.
-        for (col, char) in chars.into_iter().enumerate() {
-            // If the char is a symbol or number, set the cell to Some((char, false)).
-            if char != '.' {
-                matrix[row][col] = Some((char, false));
+    // Part two - find the sum of the product of all numbers where the symbol is a *, and has 2 or more
+    // collisions.
+    let sum_two = symbols
+        .iter()
+        .filter(|s| s.symbol == '*')
+        .map(|s| {
+            let collisions = numbers
+                .iter()
+                .filter(|n| n.collides_with(s))
+                .map(|n| n.number);
+
+            if collisions.clone().count() >= 2 {
+                return collisions.product();
             }
-        }
-    }
 
-    // Matrix should be built.
-    // print_matrix(&matrix);
-    // print_tf_matrix(&matrix);
+            0
+        })
+        .sum::<i32>();
     
-    // TODO Iterate through the matrix and check every cell that is Some((char, false)).
-    for (row, row_vec) in matrix.iter_mut().enumerate() {
-        for (col, cell) in row_vec.iter_mut().enumerate() {
-            // If the cell is Some((char, false)), check it.
-            if let Some((char, checked)) = cell {
-                // Check the cell to see if it is a symbol.
-                if !char.is_ascii_digit() {
-                    // Check around the cell for numbers. This is 8 consecutive checks.
 
-                    // Check row above.
-
-                    // Check current row.
-                    
-                    // Check row below.
-                }
-            }
-        }
-    }
+    println!("Part one: {}", sum_one);
+    println!("Part two: {}", sum_two);
 
     Ok(())
-}
-
-#[allow(dead_code)]
-fn print_matrix(matrix: &Vec<Vec<Option<(char, bool)>>>) {
-    for row in matrix {
-        for cell in row {
-            if let Some((char, _)) = cell {
-                print!("{}", char);
-            } else {
-                print!(".");
-            }
-        }
-        println!();
-    }
-}
-
-#[allow(dead_code)]
-fn print_tf_matrix(matrix: &Vec<Vec<Option<(char, bool)>>>) {
-    for row in matrix {
-        for cell in row {
-            if let Some((_, checked)) = cell {
-                if *checked {
-                    print!("T");
-                } else {
-                    print!("F");
-                }
-            } else {
-                print!(".");
-            }
-        }
-        println!();
-    }
 }
